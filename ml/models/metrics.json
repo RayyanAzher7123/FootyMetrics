@@ -1,0 +1,11 @@
+{
+  "mae": 11696833.020423211,
+  "rmse": 15514553.533198649,
+  "r2": 0.37159221933145603,
+  "n_train": 375,
+  "n_test": 94,
+  "n_total": 469,
+  "model": "LinearRegression",
+  "target": "market_value_eur",
+  "dataset": "data\\raw\\premier_league_valuations.csv"
+}

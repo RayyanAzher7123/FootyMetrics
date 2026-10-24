@@ -1,0 +1,72 @@
+{
+  "features": [
+    "home_form_ppg",
+    "away_form_ppg",
+    "home_gf_avg",
+    "home_ga_avg",
+    "away_gf_avg",
+    "away_ga_avg",
+    "home_shots_avg",
+    "away_shots_avg",
+    "home_sot_avg",
+    "away_sot_avg",
+    "h2h_home_win_rate",
+    "h2h_draw_rate"
+  ],
+  "classes": [
+    "A",
+    "D",
+    "H"
+  ],
+  "feature_importance": [
+    {
+      "feature": "away_shots_avg",
+      "importance": 0.12608058979356207
+    },
+    {
+      "feature": "home_sot_avg",
+      "importance": 0.09682186480125904
+    },
+    {
+      "feature": "h2h_home_win_rate",
+      "importance": 0.08916818331650873
+    },
+    {
+      "feature": "away_ga_avg",
+      "importance": 0.08654193282395144
+    },
+    {
+      "feature": "h2h_draw_rate",
+      "importance": 0.07803621482092174
+    },
+    {
+      "feature": "home_shots_avg",
+      "importance": 0.07643705467608185
+    },
+    {
+      "feature": "away_gf_avg",
+      "importance": 0.06638460129888421
+    },
+    {
+      "feature": "home_ga_avg",
+      "importance": 0.052795933649571664
+    },
+    {
+      "feature": "home_gf_avg",
+      "importance": 0.043819922173214974
+    },
+    {
+      "feature": "away_sot_avg",
+      "importance": 0.043019105096029714
+    },
+    {
+      "feature": "home_form_ppg",
+      "importance": 0.037469040980360885
+    },
+    {
+      "feature": "away_form_ppg",
+      "importance": 0.019289899878163538
+    }
+  ],
+  "data_source": "football-data.co.uk"
+}

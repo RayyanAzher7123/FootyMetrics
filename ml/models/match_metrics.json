@@ -1,0 +1,51 @@
+{
+  "model": "LogisticRegression",
+  "accuracy": 0.46172248803827753,
+  "log_loss": 1.044912804384184,
+  "brier_score": 0.6286017438757151,
+  "n_train": 3344,
+  "n_test": 836,
+  "n_total": 4180,
+  "classes": [
+    "A",
+    "D",
+    "H"
+  ],
+  "confusion_matrix": [
+    [
+      146,
+      55,
+      73
+    ],
+    [
+      81,
+      45,
+      85
+    ],
+    [
+      92,
+      64,
+      195
+    ]
+  ],
+  "dataset": "data\\raw\\premier_league_matches.csv",
+  "data_source": "football-data.co.uk Premier League (E0)",
+  "split": "temporal",
+  "features": [
+    "home_form_ppg",
+    "away_form_ppg",
+    "home_gf_avg",
+    "home_ga_avg",
+    "away_gf_avg",
+    "away_ga_avg",
+    "home_shots_avg",
+    "away_shots_avg",
+    "home_sot_avg",
+    "away_sot_avg",
+    "h2h_home_win_rate",
+    "h2h_draw_rate"
+  ],
+  "brier_A": 0.20414549219539804,
+  "brier_D": 0.19615349768218385,
+  "brier_H": 0.22830275399813316
+}

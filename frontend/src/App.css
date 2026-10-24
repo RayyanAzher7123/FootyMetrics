@@ -1,0 +1,14 @@
+/* Component utilities live in index.css / Tailwind. Kept empty for Vite scaffold compatibility. */
+
+.field-input {
+  width: 100%;
+  border: 1px solid color-mix(in oklab, var(--color-pitch) 20%, transparent);
+  background: rgb(255 255 255 / 0.85);
+  padding: 0.65rem 0.85rem;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.field-input:focus {
+  box-shadow: 0 0 0 2px var(--color-lime);
+}

@@ -1,0 +1,61 @@
+{
+  "numeric_features": [
+    "age",
+    "appearances",
+    "goals",
+    "assists",
+    "minutes",
+    "goals_per90",
+    "assists_per90"
+  ],
+  "categorical_features": [
+    "position"
+  ],
+  "target": "market_value_eur",
+  "coefficients": [
+    {
+      "feature": "goals",
+      "coefficient": 10753984.154138189
+    },
+    {
+      "feature": "age",
+      "coefficient": -9682557.585625133
+    },
+    {
+      "feature": "appearances",
+      "coefficient": 9129884.790706523
+    },
+    {
+      "feature": "position_FWD",
+      "coefficient": -8644227.80390646
+    },
+    {
+      "feature": "position_DEF",
+      "coefficient": 3668419.2714570365
+    },
+    {
+      "feature": "minutes",
+      "coefficient": -3197075.209765993
+    },
+    {
+      "feature": "position_GK",
+      "coefficient": 2926601.6985433986
+    },
+    {
+      "feature": "assists",
+      "coefficient": 2495320.4552905406
+    },
+    {
+      "feature": "position_MID",
+      "coefficient": 2049206.8339059735
+    },
+    {
+      "feature": "assists_per90",
+      "coefficient": 503635.03342676396
+    },
+    {
+      "feature": "goals_per90",
+      "coefficient": 408200.75355342054
+    }
+  ]
+}

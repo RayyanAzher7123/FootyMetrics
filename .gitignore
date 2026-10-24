@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.joblib
+!ml/models/.gitkeep
+
+# Node
+node_modules/
+dist/
+*.local
+.vite/
+
+# Data / models (keep structure, ignore large artifacts)
+data/raw/*
+!data/raw/.gitkeep
+!data/raw/premier_league_valuations.csv
+!data/raw/premier_league_matches.csv
+data/raw/football_data/
+data/raw/fpl/
+data/raw/transfermarkt/
+data/processed/*
+!data/processed/.gitkeep
+ml/models/*
+!ml/models/.gitkeep
+!ml/models/metrics.json
+!ml/models/feature_meta.json
+!ml/models/match_metrics.json
+!ml/models/match_feature_meta.json
+!ml/models/scouting_metrics.json
+!data/processed/scouting_players.csv
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log
+
+# Coverage
+coverage/
+htmlcov/
+.coverage

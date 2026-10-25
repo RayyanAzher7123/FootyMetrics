@@ -28,6 +28,7 @@ def similar_players(
     player_id: int,
     limit: int = Query(default=8, ge=1, le=30),
     position: str | None = Query(default=None, pattern="^(GK|DEF|MID|FWD)$"),
+    same_position: bool = Query(default=True),
     max_age: int | None = Query(default=None, ge=15, le=45),
     max_value: int | None = Query(default=None, ge=0),
 ) -> SimilarPlayersResponse:
@@ -36,6 +37,7 @@ def similar_players(
             player_id=player_id,
             limit=limit,
             position=position,
+            same_position=same_position,
             max_age=max_age,
             max_value=max_value,
         )

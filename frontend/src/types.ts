@@ -144,6 +144,7 @@ export interface ScoutPlayer {
   pca_y: number
   similarity?: number | null
   photo_url?: string | null
+  qualified?: boolean
 }
 
 export interface SimilarPlayersResponse {

@@ -47,7 +47,7 @@ Outputs:
 - `data/processed/scouting_players.csv` — latest profile per player + cluster + PCA coords  
 - `ml/models/scouting_bundle.joblib` — scaler, K-Means, nearest neighbors, PCA  
 
-Similarity uses cosine distance on scaled season features. Filters (position, max age, max value) apply after neighbor search.
+Similarity is cosine distance on per-90 rates (goals, assists, xG, xA, goals conceded, saves, clean sheets, defensive contribution), compared inside one position. Age, appearances, and raw totals are not distance features. Only current-squad players with at least 900 minutes in the previous finished season enter the neighbour index. Shorter samples stay searchable and return no recommendation.
 
 ## Legacy bootstrap generators
 

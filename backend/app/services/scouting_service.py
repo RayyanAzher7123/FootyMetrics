@@ -4,7 +4,9 @@ import json
 from functools import lru_cache
 
 import joblib
+import numpy as np
 import pandas as pd
+from sklearn.metrics.pairwise import cosine_distances
 
 from backend.app.config import settings
 from backend.app.services.photos import photo_url
@@ -18,9 +20,8 @@ from backend.app.schemas.scouting import (
 )
 
 DATASET_NOTE = (
-    "Scouting uses real Premier League season stats (FPL history). "
-    "Similarity is cosine distance on scaled performance features; "
-    "clusters from K-Means. Not a live recruitment database."
+    "Similar players share a position and a per-90 profile from the last finished season. "
+    "Short appearances are left out of the comparison. Not a live recruitment database."
 )
 
 
@@ -81,6 +82,43 @@ def _row_to_player(row: pd.Series, similarity: float | None = None) -> ScoutPlay
         pca_y=float(row["pca_y"]),
         similarity=similarity,
         photo_url=photo_url(row),
+        qualified=_as_bool(row.get("qualified", True)),
+    )
+
+
+def _as_bool(value: object) -> bool:
+    if isinstance(value, str):
+        return value.strip().lower() == "true"
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return False
+    return bool(value)
+
+
+def _floor() -> tuple[str, int]:
+    bundle = _load_bundle()
+    metrics = _load_metrics()
+    season = str(bundle.get("stats_season") or metrics.get("stats_season") or "2025/26")
+    minutes = int(bundle.get("min_minutes") or metrics.get("min_minutes") or 900)
+    return season, minutes
+
+
+def _note(*, qualified: bool, has_previous: bool) -> str:
+    season, minutes = _floor()
+    if not has_previous:
+        return (
+            f"Comparisons use {season} per-90 rates inside one position, "
+            f"for players with at least {minutes} minutes. "
+            "This player has no finished Premier League season on file."
+        )
+    if not qualified:
+        return (
+            f"Comparisons use {season} per-90 rates inside one position, "
+            f"for players with at least {minutes} minutes. "
+            "This player is under that minutes floor, so no one is recommended."
+        )
+    return (
+        f"Same position, at least {minutes} minutes in {season}. "
+        "Distance uses per-90 rates. Age and total minutes are not part of it."
     )
 
 
@@ -122,48 +160,110 @@ def find_similar(
     player_id: int,
     limit: int = 8,
     position: str | None = None,
+    same_position: bool = True,
     max_age: int | None = None,
     max_value: int | None = None,
 ) -> SimilarPlayersResponse:
-    bundle = _load_bundle()
     players = _load_players()
-    ids: list[int] = bundle["player_ids"]
-    if player_id not in ids:
+    rows = players[players["player_id"] == player_id]
+    if rows.empty:
         raise ValueError("Player not found in scouting index")
+    ref_row = rows.iloc[0]
+    qualified = _as_bool(ref_row.get("qualified", True))
+    has_previous = str(ref_row["season"]) == _floor()[0]
+    if not qualified:
+        return SimilarPlayersResponse(
+            reference=_row_to_player(ref_row),
+            similar=[],
+            dataset_note=_note(qualified=False, has_previous=has_previous),
+        )
 
-    idx = ids.index(player_id)
-    x_scaled = bundle["x_scaled"]
-    # Ask for extra neighbors so filters still leave enough results
-    k = min(len(ids), max(limit * 5, 20))
-    distances, indices = bundle["nn"].kneighbors(x_scaled[idx : idx + 1], n_neighbors=k)
-    distances = distances[0]
-    indices = indices[0]
+    target = position or (str(ref_row["position"]) if same_position else None)
+    spaces = _load_bundle().get("position_spaces") or {}
+    space = spaces.get(target) if target else None
+    if space is None and target is None:
+        # Any-position request: score each position space with that position's scaler.
+        similar = _similar_any_position(ref_row, limit, max_age, max_value)
+        return SimilarPlayersResponse(
+            reference=_row_to_player(ref_row),
+            similar=similar,
+            dataset_note=_note(qualified=True, has_previous=True),
+        )
+    if space is None:
+        return SimilarPlayersResponse(
+            reference=_row_to_player(ref_row),
+            similar=[],
+            dataset_note=_note(qualified=True, has_previous=True),
+        )
 
-    ref_row = players[players["player_id"] == player_id].iloc[0]
+    similar = _rank_space(ref_row, space, limit, max_age, max_value)
+    return SimilarPlayersResponse(
+        reference=_row_to_player(ref_row),
+        similar=similar,
+        dataset_note=_note(qualified=True, has_previous=True),
+    )
+
+
+def _reference_vector(ref_row: pd.Series, space: dict) -> np.ndarray:
+    ids: list[int] = space["player_ids"]
+    player_id = int(ref_row["player_id"])
+    if player_id in ids and str(ref_row["position"]) == _space_position(space, player_id):
+        idx = ids.index(player_id)
+        return space["x_scaled"][idx : idx + 1]
+    raw = np.array([[float(ref_row.get(col, 0.0)) for col in space["columns"]]])
+    return space["scaler"].transform(raw)
+
+
+def _space_position(space: dict, player_id: int) -> str:
+    players = _load_players()
+    match = players.loc[players["player_id"] == player_id, "position"]
+    return str(match.iloc[0]) if not match.empty else ""
+
+
+def _rank_space(
+    ref_row: pd.Series,
+    space: dict,
+    limit: int,
+    max_age: int | None,
+    max_value: int | None,
+) -> list[ScoutPlayer]:
+    players = _load_players()
+    ids: list[int] = space["player_ids"]
+    vec = _reference_vector(ref_row, space)
+    distances = cosine_distances(vec, space["x_scaled"])[0]
+    order = np.argsort(distances)
     similar: list[ScoutPlayer] = []
-    for dist, j in zip(distances, indices, strict=True):
-        pid = ids[j]
-        if pid == player_id:
+    for j in order:
+        pid = ids[int(j)]
+        if pid == int(ref_row["player_id"]):
             continue
-        row = players[players["player_id"] == pid].iloc[0]
-        if position and str(row["position"]) != position:
+        row = players[players["player_id"] == pid]
+        if row.empty:
             continue
+        row = row.iloc[0]
         if max_age is not None and int(row["age"]) > max_age:
             continue
         if max_value is not None and pd.notna(row["market_value_eur"]):
             if int(row["market_value_eur"]) > max_value:
                 continue
-        # cosine distance -> similarity percent
-        sim = float(max(0.0, 1.0 - dist) * 100.0)
+        sim = float(max(0.0, 1.0 - float(distances[j])) * 100.0)
         similar.append(_row_to_player(row, similarity=round(sim, 1)))
         if len(similar) >= limit:
             break
+    return similar
 
-    return SimilarPlayersResponse(
-        reference=_row_to_player(ref_row),
-        similar=similar,
-        dataset_note=DATASET_NOTE,
-    )
+
+def _similar_any_position(
+    ref_row: pd.Series,
+    limit: int,
+    max_age: int | None,
+    max_value: int | None,
+) -> list[ScoutPlayer]:
+    found: list[ScoutPlayer] = []
+    for space in (_load_bundle().get("position_spaces") or {}).values():
+        found.extend(_rank_space(ref_row, space, limit, max_age, max_value))
+    found.sort(key=lambda player: player.similarity or 0, reverse=True)
+    return found[:limit]
 
 
 def compare_players(player_ids: list[int]) -> CompareResponse:
@@ -182,17 +282,18 @@ def compare_players(player_ids: list[int]) -> CompareResponse:
 
 def list_clusters(map_limit: int = 200) -> ClustersResponse:
     players = _load_players()
+    players = players[players["cluster_id"] >= 0] if "cluster_id" in players.columns else players
     bundle = _load_bundle()
     meta = bundle.get("cluster_meta") or _load_metrics().get("clusters", [])
     clusters: list[ClusterInfo] = []
     for item in meta:
         cid = int(item["cluster_id"])
-        sample = (
-            players[players["cluster_id"] == cid]
-            .sort_values("goals", ascending=False)["player_name"]
-            .head(4)
-            .tolist()
-        )
+        dominant = str(item.get("dominant_position", ""))
+        pool = players[players["cluster_id"] == cid]
+        named = pool[pool["position"] == dominant] if dominant else pool
+        if named.empty:
+            named = pool
+        sample = named.sort_values("goals", ascending=False)["player_name"].head(4).tolist()
         clusters.append(
             ClusterInfo(
                 cluster_id=cid,
@@ -217,7 +318,7 @@ def list_clusters(map_limit: int = 200) -> ClustersResponse:
     return ClustersResponse(
         clusters=sorted(clusters, key=lambda c: c.cluster_id),
         map_points=points,
-        dataset_note=DATASET_NOTE,
+        dataset_note=_note(qualified=True, has_previous=True),
     )
 
 
@@ -227,5 +328,5 @@ def model_info() -> ScoutingModelInfo:
         model_name=str(metrics.get("model", "KMeans+NearestNeighbors+PCA")),
         metrics=metrics,
         features=list(metrics.get("features", [])),
-        dataset_note=DATASET_NOTE,
+        dataset_note=_note(qualified=True, has_previous=True),
     )

@@ -21,6 +21,7 @@ class ScoutPlayer(BaseModel):
     pca_y: float
     similarity: float | None = None
     photo_url: str | None = None
+    qualified: bool = True
 
 
 class SimilarPlayersResponse(BaseModel):

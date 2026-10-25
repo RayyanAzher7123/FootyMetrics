@@ -80,11 +80,18 @@ export function searchScoutPlayers(q: string): Promise<ScoutPlayer[]> {
 
 export function getSimilarPlayers(
   playerId: number,
-  opts: { limit?: number; position?: string; maxAge?: number; maxValue?: number } = {},
+  opts: {
+    limit?: number
+    position?: string
+    maxAge?: number
+    maxValue?: number
+    samePosition?: boolean
+  } = {},
 ): Promise<SimilarPlayersResponse> {
   const params = new URLSearchParams()
   params.set('limit', String(opts.limit ?? 8))
   if (opts.position) params.set('position', opts.position)
+  if (opts.samePosition === false) params.set('same_position', 'false')
   if (opts.maxAge != null) params.set('max_age', String(opts.maxAge))
   if (opts.maxValue != null) params.set('max_value', String(opts.maxValue))
   return request(`/api/scouting/similar/${playerId}?${params.toString()}`)

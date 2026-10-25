@@ -81,7 +81,8 @@ export function ScoutingPage() {
     try {
       const res = await getSimilarPlayers(player.player_id, {
         limit: 8,
-        position: positionFilter || undefined,
+        position: positionFilter && positionFilter !== 'ANY' ? positionFilter : undefined,
+        samePosition: positionFilter !== 'ANY',
         maxAge: maxAge ? Number(maxAge) : undefined,
         maxValue: maxValueM ? Number(maxValueM) * 1_000_000 : undefined,
       })
@@ -140,8 +141,8 @@ export function ScoutingPage() {
           Player scouting
         </h1>
         <p className="mt-4 max-w-xl text-base leading-relaxed text-white/65">
-          Find statistically similar Premier League players, compare profiles side by side,
-          and explore performance clusters from real season data.
+        Find players with a similar per-90 profile in the same position. The comparison
+        uses last season’s rates and leaves out short appearances.
         </p>
       </section>
 
@@ -192,7 +193,8 @@ export function ScoutingPage() {
                 onChange={(e) => setPositionFilter(e.target.value)}
                 className="field-input"
               >
-                <option value="">Any</option>
+                <option value="">Same position</option>
+                <option value="ANY">Any position</option>
                 {['GK', 'DEF', 'MID', 'FWD'].map((p) => (
                   <option key={p} value={p}>
                     {p}
@@ -250,7 +252,7 @@ export function ScoutingPage() {
                     {selected.player_name}
                   </h2>
                   <p className="text-sm text-white/60">
-                    {selected.club} · {selected.position} · {selected.age} · {selected.cluster_label}
+                    {selected.club} · {selected.position} · {selected.season} · {selected.cluster_label}
                   </p>
                   <button
                     type="button"
@@ -288,7 +290,7 @@ export function ScoutingPage() {
                     <PlayerPortrait name={player.player_name} photoUrl={player.photo_url} />
                     <p className="mt-3 font-semibold leading-tight">{player.player_name}</p>
                     <p className="text-xs text-white/50">
-                      {player.club} · {player.position}
+                      {player.club} · {player.position} · {player.minutes.toLocaleString()} min
                     </p>
                     <p className="mt-2 font-display text-3xl text-lime">
                       {player.similarity?.toFixed(0)}%
@@ -298,6 +300,10 @@ export function ScoutingPage() {
               </div>
               {note && <p className="mt-3 text-xs text-white/45">{note}</p>}
             </div>
+          )}
+
+          {selected && !loading && similar.length === 0 && note && (
+            <p className="text-sm leading-relaxed text-white/70">{note}</p>
           )}
         </section>
 
@@ -426,9 +432,21 @@ export function ScoutingPage() {
               </h3>
               <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-ink/45">players</dt>
+                  <dt className="text-xs uppercase tracking-wide text-ink/45">compared</dt>
                   <dd className="font-semibold text-pitch-deep">
                     {String(modelInfo.metrics.n_players ?? '—')}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-ink/45">minutes floor</dt>
+                  <dd className="font-semibold text-pitch-deep">
+                    {String(modelInfo.metrics.min_minutes ?? '—')}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-ink/45">stats season</dt>
+                  <dd className="font-semibold text-pitch-deep">
+                    {String(modelInfo.metrics.stats_season ?? '—')}
                   </dd>
                 </div>
                 <div>

@@ -46,6 +46,20 @@ class ValuationResponse(BaseModel):
     metrics: dict[str, float | int | str]
 
 
+class ModelScore(BaseModel):
+    model: str
+    mae: float
+    rmse: float
+    r2: float
+
+
+class ValueBandError(BaseModel):
+    band: str
+    n: int
+    mae: float
+    rmse: float
+
+
 class ModelInfoResponse(BaseModel):
     model_name: str
     metrics: dict[str, float | int | str]
@@ -53,3 +67,5 @@ class ModelInfoResponse(BaseModel):
     numeric_features: list[str]
     categorical_features: list[str]
     dataset_note: str
+    comparison: list[ModelScore] = []
+    value_bands: list[ValueBandError] = []

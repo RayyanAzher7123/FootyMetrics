@@ -45,6 +45,20 @@ export interface ValuationResponse {
   metrics: Record<string, number | string>
 }
 
+export interface ModelScore {
+  model: string
+  mae: number
+  rmse: number
+  r2: number
+}
+
+export interface ValueBandError {
+  band: string
+  n: number
+  mae: number
+  rmse: number
+}
+
 export interface ModelInfoResponse {
   model_name: string
   metrics: Record<string, number | string>
@@ -52,6 +66,8 @@ export interface ModelInfoResponse {
   numeric_features: string[]
   categorical_features: string[]
   dataset_note: string
+  comparison?: ModelScore[]
+  value_bands?: ValueBandError[]
 }
 
 export interface TeamForm {

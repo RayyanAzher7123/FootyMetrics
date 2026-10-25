@@ -4,21 +4,21 @@ import json
 from functools import lru_cache
 
 import joblib
-import numpy as np
 import pandas as pd
 
 from backend.app.config import settings
 from backend.app.schemas.valuation import (
     FeatureContribution,
     ModelInfoResponse,
+    ModelScore,
     ValuationRequest,
     ValuationResponse,
+    ValueBandError,
 )
 
 DATASET_NOTE = (
-    "Trained on 2025/26 Premier League season stats. "
-    "Market quotes are Transfermarkt squad values as of 12 June 2026, "
-    "matched by player name. Estimates are model outputs, not live fees."
+    "Labels are the Transfermarkt quote nearest 30 June at the end of each season. "
+    "Reported error is a later-season holdout. Estimates are not live fees."
 )
 
 
@@ -54,6 +54,21 @@ def reload_model() -> None:
     _load_feature_meta.cache_clear()
 
 
+def _scalar_metrics(metrics: dict) -> dict[str, float | int | str]:
+    clean: dict[str, float | int | str] = {}
+    for key, value in metrics.items():
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, (int, float, str)):
+            clean[key] = value
+    return clean
+
+
+def _dataset_note() -> str:
+    note = _load_metrics().get("dataset_note")
+    return note if isinstance(note, str) and note else DATASET_NOTE
+
+
 def format_eur(value: int) -> str:
     if value >= 1_000_000:
         return f"€{value / 1_000_000:.1f}M"
@@ -87,11 +102,7 @@ def predict_value(payload: ValuationRequest) -> ValuationResponse:
         FeatureContribution(feature=item["feature"], coefficient=item["coefficient"])
         for item in meta.get("coefficients", [])[:6]
     ]
-    metrics = _load_metrics()
-    # Keep JSON-serializable primitives
-    clean_metrics = {
-        k: (float(v) if isinstance(v, (np.floating,)) else v) for k, v in metrics.items()
-    }
+    clean_metrics = _scalar_metrics(_load_metrics())
 
     return ValuationResponse(
         estimated_value_eur=estimate,
@@ -99,7 +110,7 @@ def predict_value(payload: ValuationRequest) -> ValuationResponse:
         inputs=payload,
         top_factors=top,
         model_name=str(clean_metrics.get("model", "LinearRegression")),
-        dataset_note=DATASET_NOTE,
+        dataset_note=_dataset_note(),
         metrics=clean_metrics,
     )
 
@@ -111,11 +122,15 @@ def model_info() -> ModelInfoResponse:
         FeatureContribution(feature=item["feature"], coefficient=item["coefficient"])
         for item in meta.get("coefficients", [])[:8]
     ]
+    comparison = [ModelScore(**row) for row in metrics.get("comparison", [])]
+    bands = [ValueBandError(**row) for row in metrics.get("value_bands", [])]
     return ModelInfoResponse(
         model_name=str(metrics.get("model", "LinearRegression")),
-        metrics=metrics,
+        metrics=_scalar_metrics(metrics),
         top_factors=top,
         numeric_features=list(meta.get("numeric_features", [])),
         categorical_features=list(meta.get("categorical_features", [])),
-        dataset_note=DATASET_NOTE,
+        dataset_note=_dataset_note(),
+        comparison=comparison,
+        value_bands=bands,
     )

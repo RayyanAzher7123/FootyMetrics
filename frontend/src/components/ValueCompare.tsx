@@ -54,7 +54,7 @@ export function ValueCompare({
       </div>
       <p className="mt-2 text-xs leading-relaxed text-ink/55">
         {actual != null
-          ? 'The market bar is that player’s Transfermarkt squad value as of June 2026. The model bar is the estimate from last season’s stats.'
+          ? 'The market bar is the Transfermarkt quote nearest the end of the season those stats come from. The model bar is the estimate from those stats.'
           : 'This player has no matched squad quote, so only the model estimate is drawn.'}
       </p>
     </div>

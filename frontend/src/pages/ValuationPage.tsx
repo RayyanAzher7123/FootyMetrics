@@ -11,6 +11,16 @@ function formatEur(value: number | null | undefined): string {
   return `€${value}`
 }
 
+const METRIC_LABELS: Record<string, string> = {
+  mae: 'Holdout MAE',
+  rmse: 'Holdout RMSE',
+  r2: 'Holdout R²',
+  n_train: 'Earlier rows',
+  n_test: 'Holdout rows',
+  model: 'Chosen model',
+  holdout_season: 'Holdout season',
+}
+
 function formatMetric(key: string, value: number | string): string {
   if (typeof value === 'string') return value
   if (key === 'r2') return value.toFixed(3)
@@ -218,17 +228,50 @@ export function ValuationPage() {
                 Model evaluation
               </h3>
               <dl className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-                {['mae', 'rmse', 'r2', 'n_train', 'n_test', 'model'].map((key) => {
+                {Object.keys(METRIC_LABELS).map((key) => {
                   const value = modelInfo.metrics[key]
                   if (value == null) return null
                   return (
                     <div key={key}>
-                      <dt className="text-xs uppercase tracking-wide text-ink/45">{key}</dt>
+                      <dt className="text-xs uppercase tracking-wide text-ink/45">{METRIC_LABELS[key]}</dt>
                       <dd className="font-semibold text-lime">{formatMetric(key, value)}</dd>
                     </div>
                   )
                 })}
               </dl>
+              {(modelInfo.comparison?.length ?? 0) > 0 && (
+                <div className="mt-5">
+                  <p className="text-xs uppercase tracking-wide text-ink/45">Same holdout, other models</p>
+                  <ul className="mt-2 space-y-1 text-sm">
+                    {modelInfo.comparison?.map((row) => (
+                      <li key={row.model} className="flex items-baseline justify-between gap-3">
+                        <span className={row.model === modelInfo.model_name ? 'font-semibold text-lime' : ''}>
+                          {row.model}
+                        </span>
+                        <span className="text-ink/70">
+                          {formatEur(Math.round(row.mae))} MAE · R² {row.r2.toFixed(3)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {(modelInfo.value_bands?.length ?? 0) > 0 && (
+                <div className="mt-5">
+                  <p className="text-xs uppercase tracking-wide text-ink/45">Holdout error by quote size</p>
+                  <ul className="mt-2 space-y-1 text-sm">
+                    {modelInfo.value_bands?.map((band) => (
+                      <li key={band.band} className="flex items-baseline justify-between gap-3">
+                        <span>{band.band}</span>
+                        <span className="text-ink/70">
+                          {formatEur(Math.round(band.mae))} MAE · {band.n} players
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p className="mt-4 text-xs leading-relaxed text-ink/50">{modelInfo.dataset_note}</p>
             </div>
           )}
         </section>

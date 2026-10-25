@@ -12,50 +12,39 @@
     "position"
   ],
   "target": "market_value_eur",
+  "importance_kind": "permutation_mae_increase",
   "coefficients": [
     {
-      "feature": "goals",
-      "coefficient": 10753984.154138189
-    },
-    {
       "feature": "age",
-      "coefficient": -9682557.585625133
-    },
-    {
-      "feature": "appearances",
-      "coefficient": 9129884.790706523
-    },
-    {
-      "feature": "position_FWD",
-      "coefficient": -8644227.80390646
-    },
-    {
-      "feature": "position_DEF",
-      "coefficient": 3668419.2714570365
+      "coefficient": 5040170.402903365
     },
     {
       "feature": "minutes",
-      "coefficient": -3197075.209765993
+      "coefficient": 3846468.7959418083
     },
     {
-      "feature": "position_GK",
-      "coefficient": 2926601.6985433986
-    },
-    {
-      "feature": "assists",
-      "coefficient": 2495320.4552905406
-    },
-    {
-      "feature": "position_MID",
-      "coefficient": 2049206.8339059735
-    },
-    {
-      "feature": "assists_per90",
-      "coefficient": 503635.03342676396
+      "feature": "goals",
+      "coefficient": 1927830.4335088052
     },
     {
       "feature": "goals_per90",
-      "coefficient": 408200.75355342054
+      "coefficient": 965215.0180283145
+    },
+    {
+      "feature": "appearances",
+      "coefficient": 919052.1127845154
+    },
+    {
+      "feature": "assists",
+      "coefficient": 830540.5997987821
+    },
+    {
+      "feature": "position",
+      "coefficient": 653046.1928596128
+    },
+    {
+      "feature": "assists_per90",
+      "coefficient": 568182.6292878896
     }
   ]
 }

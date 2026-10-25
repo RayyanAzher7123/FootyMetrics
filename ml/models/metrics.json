@@ -1,11 +1,78 @@
 {
-  "mae": 11696833.020423211,
-  "rmse": 15514553.533198649,
-  "r2": 0.37159221933145603,
-  "n_train": 375,
-  "n_test": 94,
-  "n_total": 469,
-  "model": "LinearRegression",
+  "mae": 10833887.638506595,
+  "rmse": 16555156.650709385,
+  "r2": 0.4825859594694347,
+  "n_train": 1823,
+  "n_test": 468,
+  "n_total": 2291,
+  "model": "HistGradientBoosting",
   "target": "market_value_eur",
-  "dataset": "data\\raw\\premier_league_valuations.csv"
+  "dataset": "data\\raw\\premier_league_valuations.csv",
+  "split": "temporal",
+  "holdout_season": "2025/26",
+  "train_seasons": [
+    "2021/22",
+    "2022/23",
+    "2023/24",
+    "2024/25"
+  ],
+  "dataset_note": "Labels are the Transfermarkt quote nearest 30 June at the end of each season. The error is a 2025/26 holdout after training on 2021/22\u20132024/25. The saved model is refit on every finished season. Estimates are not live fees.",
+  "comparison": [
+    {
+      "mae": 11491928.34895876,
+      "rmse": 17362620.743503418,
+      "r2": 0.43088218783638843,
+      "model": "LinearRegression"
+    },
+    {
+      "mae": 11493536.200773895,
+      "rmse": 17377832.317710113,
+      "r2": 0.429884530825711,
+      "model": "Ridge"
+    },
+    {
+      "mae": 12523897.43765133,
+      "rmse": 19190541.833859302,
+      "r2": 0.30474184059303455,
+      "model": "RidgeLog"
+    },
+    {
+      "mae": 10833887.638506595,
+      "rmse": 16555156.650709385,
+      "r2": 0.4825859594694347,
+      "model": "HistGradientBoosting"
+    },
+    {
+      "mae": 11449052.632497145,
+      "rmse": 17237557.11753683,
+      "r2": 0.43905141490533317,
+      "model": "RandomForest"
+    }
+  ],
+  "value_bands": [
+    {
+      "band": "Under \u20ac10M",
+      "n": 102,
+      "mae": 5522335.914254564,
+      "rmse": 7476950.234874375
+    },
+    {
+      "band": "\u20ac10\u201330M",
+      "n": 216,
+      "mae": 7103839.118096574,
+      "rmse": 9491775.183806226
+    },
+    {
+      "band": "\u20ac30\u201360M",
+      "n": 105,
+      "mae": 12220377.674390256,
+      "rmse": 14840276.801186647
+    },
+    {
+      "band": "Over \u20ac60M",
+      "n": 45,
+      "mae": 37542494.36105076,
+      "rmse": 42158211.126086205
+    }
+  ]
 }

@@ -3,9 +3,12 @@
 Player performance: Fantasy Premier League historical season totals
 (https://github.com/vaastav/Fantasy-Premier-League)
 
-Market-value labels: Transfermarkt valuations from
-https://github.com/eordo/transfermarkt-data (matched by player name when possible).
-Rows without a TM match fall back to an FPL-price-scaled estimate and are flagged.
+Market-value labels: dated Transfermarkt valuations from
+transfermarkt-datasets (player_valuations.csv.gz), matched by player name.
+Each season uses the quote nearest 30 June at the end of that season.
+Players with no name match, and finished seasons with no quote in that
+window, are left unlisted. The in-progress season may fall back to the
+latest squad snapshot so the app can still show a current quote.
 """
 
 from __future__ import annotations
@@ -84,6 +87,12 @@ def fetch_fpl_season(season: str) -> None:
 SQUAD_VALUES_URL = (
     "https://pub-e682421888d945d684bcae8890b0ec20.r2.dev/data/players.csv.gz"
 )
+VALUATIONS_URL = (
+    "https://pub-e682421888d945d684bcae8890b0ec20.r2.dev/data/player_valuations.csv.gz"
+)
+# A quote counts for a season when it falls in this window around 30 June.
+QUOTE_BEFORE_DAYS = 400
+QUOTE_AFTER_DAYS = 45
 
 
 def _age_at_season_end(birth, season: str) -> int | None:
@@ -125,6 +134,7 @@ def load_squad_quotes() -> dict[str, dict[str, dict]]:
             "value": float(row["market_value_in_eur"]),
             "tm_name": str(row["name"]),
             "pref": int(row["pref"]),
+            "player_id": int(row["player_id"]),
         }
         full = _normalize_name(str(row["name"]))
         parts = full.split()
@@ -187,6 +197,81 @@ def match_quote(name: str, web_name: str, quotes: dict[str, dict[str, dict]]) ->
     return None
 
 
+def season_end(season: str) -> pd.Timestamp:
+    """30 June after the season's start year. 2025/26 and 2025-26 both end in 2026."""
+    return pd.Timestamp(year=int(str(season)[:4]) + 1, month=6, day=30)
+
+
+def quote_near_season_end(
+    dates: np.ndarray,
+    values: np.ndarray,
+    season: str,
+    before_days: int = QUOTE_BEFORE_DAYS,
+    after_days: int = QUOTE_AFTER_DAYS,
+) -> tuple[int, str] | None:
+    """Latest valuation inside the window around that season's 30 June.
+
+    A June 2026 squad price must not label a 2021/22 season. Quotes from
+    after the window are ignored, and so are quotes that had already gone stale.
+    """
+    if len(dates) == 0:
+        return None
+    end = season_end(season)
+    start = np.datetime64(end - pd.Timedelta(days=before_days), "ns")
+    stop = np.datetime64(end + pd.Timedelta(days=after_days), "ns")
+    dated = np.asarray(dates, dtype="datetime64[ns]")
+    mask = (dated >= start) & (dated <= stop)
+    if not mask.any():
+        return None
+    idx = int(np.flatnonzero(mask)[-1])
+    value = int(round(float(values[idx]), -3))
+    date = pd.Timestamp(dated[idx]).date().isoformat()
+    return value, date
+
+
+def load_valuation_history() -> dict[int, tuple[np.ndarray, np.ndarray]]:
+    path = TM_DIR / "player_valuations.csv.gz"
+    _download(VALUATIONS_URL, path)
+    vals = pd.read_csv(path, usecols=["player_id", "date", "market_value_in_eur"])
+    vals = vals.dropna(subset=["player_id", "date", "market_value_in_eur"])
+    vals["date"] = pd.to_datetime(vals["date"])
+    vals = vals.sort_values(["player_id", "date"])
+    history: dict[int, tuple[np.ndarray, np.ndarray]] = {}
+    for player_id, group in vals.groupby("player_id", sort=False):
+        history[int(player_id)] = (
+            group["date"].to_numpy(dtype="datetime64[ns]"),
+            group["market_value_in_eur"].to_numpy(dtype="float64"),
+        )
+    print(f"Valuation history: {len(vals)} quotes for {len(history)} players")
+    return history
+
+
+def label_for_season(
+    quote: dict | None,
+    history: dict[int, tuple[np.ndarray, np.ndarray]],
+    season_label: str,
+    latest_label: str,
+) -> tuple[int | None, str | None, str]:
+    """Return (market value, quote date, source) aligned to this season."""
+    series = None
+    aligned = None
+    if quote is not None:
+        series = history.get(int(quote["player_id"]))
+        if series is not None:
+            aligned = quote_near_season_end(series[0], series[1], season_label)
+    if aligned is not None:
+        value, date = aligned
+        return value, date, "transfermarkt"
+    # The open season has no end-of-season quote yet. Keep the latest snapshot
+    # for display, and keep it out of training via the season filter.
+    if quote is not None and season_label == latest_label:
+        date = None
+        if series is not None and len(series[0]):
+            date = pd.Timestamp(series[0][-1]).date().isoformat()
+        return int(round(float(quote["value"]), -3)), date, "transfermarkt"
+    return None, None, "unlisted"
+
+
 def fetch_transfermarkt(years: list[int] | None = None) -> pd.DataFrame:
     years = years or [2021, 2022, 2023, 2024, 2025, 2026]
     frames: list[pd.DataFrame] = []
@@ -234,6 +319,8 @@ def build_dataset() -> pd.DataFrame:
     for season in SEASONS:
         fetch_fpl_season(season)
     quotes = load_squad_quotes()
+    history = load_valuation_history()
+    latest_label = _season_label(SEASONS[-1])
 
     rows: list[dict] = []
     player_id = 1
@@ -283,13 +370,10 @@ def build_dataset() -> pd.DataFrame:
             key = _normalize_name(name)
             quote = match_quote(name, web, quotes)
             age = _age_at_season_end(r.get("birth_date"), season) or 25
-            if quote:
-                market_value = int(round(quote["value"], -3))
-                value_source = "transfermarkt"
-            else:
-                # No squad quote. Leave it blank rather than pretending an FPL price is a fee.
-                market_value = None
-                value_source = "unlisted"
+            season_label = _season_label(season)
+            market_value, valuation_date, value_source = label_for_season(
+                quote, history, season_label, latest_label
+            )
 
             if key not in id_by_key:
                 id_by_key[key] = player_id
@@ -299,7 +383,7 @@ def build_dataset() -> pd.DataFrame:
                 {
                     "player_id": id_by_key[key],
                     "player_name": name,
-                    "season": _season_label(season),
+                    "season": season_label,
                     "age": age,
                     "position": position,
                     "club": club,
@@ -310,8 +394,9 @@ def build_dataset() -> pd.DataFrame:
                     "goals_per90": round(goals / minutes * 90, 3) if minutes else 0.0,
                     "assists_per90": round(assists / minutes * 90, 3) if minutes else 0.0,
                     "market_value_eur": market_value,
-                    "valuation_date": f"{season[:4]}-06-01",
+                    "valuation_date": valuation_date,
                     "value_source": value_source,
+                    "tm_player_id": int(quote["player_id"]) if quote else None,
                     "photo_code": int(r["code"]) if pd.notna(r.get("code")) else None,
                 }
             )
@@ -328,8 +413,11 @@ def build_dataset() -> pd.DataFrame:
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(OUT_PATH, index=False)
     print(f"Wrote {len(df)} rows ({df.player_id.nunique()} players) -> {OUT_PATH}")
+    labelled = df[df["value_source"] == "transfermarkt"]
+    print("Dated quotes by season:")
+    print(labelled.groupby("season").size().to_string())
     print(df.sort_values("market_value_eur", ascending=False).head(8)[
-        ["player_name", "club", "season", "goals", "assists", "market_value_eur", "value_source"]
+        ["player_name", "club", "season", "goals", "assists", "market_value_eur", "valuation_date", "value_source"]
     ].to_string(index=False))
     return df
 

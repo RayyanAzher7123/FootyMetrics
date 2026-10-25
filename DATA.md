@@ -19,7 +19,7 @@ Features are engineered chronologically (form, shots, H2H) so a fixture never se
 | Path | Description |
 |------|-------------|
 | `data/raw/fpl/` | Fantasy Premier League season stats ([vaastav/FPL](https://github.com/vaastav/Fantasy-Premier-League)) |
-| `data/raw/transfermarkt/` | Full-squad Transfermarkt values through 12 June 2026 ([transfermarkt-datasets](https://github.com/dcaribou/transfermarkt-datasets) `players.csv.gz`). Players with no name match are left unlisted. |
+| `data/raw/transfermarkt/` | Transfermarkt players and dated quotes through 12 June 2026 ([transfermarkt-datasets](https://github.com/dcaribou/transfermarkt-datasets) `players.csv.gz` and `player_valuations.csv.gz`). Each season is labelled with the quote nearest 30 June at the end of that season. Players with no name match, and seasons with no quote in that window, are left unlisted. |
 | `data/raw/premier_league_valuations.csv` | Joined training/search table |
 
 ```bash
@@ -28,9 +28,10 @@ python -m ml.training.train_valuation
 ```
 
 - **Performance features** come from real FPL season totals (minutes, goals, assists, etc.).
-- **Market value labels** prefer Transfermarkt values matched by player name.
-- Unmatched players stay searchable using an FPL-price proxy flag (`value_source`).
-- Search and scouting show **only the latest ingested season** (currently 2026/27). Players who left the Premier League stay in the historical file for training but do not appear in the app. Season stats for 2026/27 are season-to-date, not a full campaign.
+- **Market value labels** are dated Transfermarkt quotes matched by player name. A 2021/22 season uses the quote from around June 2022, not the June 2026 snapshot.
+- Unmatched players stay searchable with `value_source=unlisted` and no market value. An FPL price is not used as a fee.
+- The valuation model is compared on a later finished season (trained on earlier seasons only). The saved model is then refit on every finished season. The in-progress season is not used for training.
+- Search shows the current squad with the previous season’s stats and that season’s end quote. Scouting shows the latest ingested season (currently 2026/27). Players who left the Premier League stay in the historical file but do not appear in search. Season stats for 2026/27 are season-to-date, not a full campaign.
 
 Estimates are still model outputs — not live broker quotes.
 

@@ -47,3 +47,6 @@ Thumbs.db
 coverage/
 htmlcov/
 .coverage
+
+# Portfolio zip built by scripts/make_release.py
+releases/

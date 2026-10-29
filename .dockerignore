@@ -1,0 +1,13 @@
+.git
+.venv
+venv
+frontend
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+data/raw/transfermarkt
+data/raw/fpl
+data/raw/football_data
+*.log

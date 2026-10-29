@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.config import settings
@@ -31,4 +31,7 @@ app.include_router(scouting.router, prefix="/api")
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "service": settings.app_name}
+    missing = [path.name for path in settings.runtime_files() if not path.exists()]
+    if missing:
+        raise HTTPException(status_code=503, detail=f"Missing data files: {', '.join(missing)}")
+    return {"status": "ok", "service": settings.app_name, "storage": "files"}

@@ -6,10 +6,11 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
+    """File-backed runtime. CSV tables live under data_dir and joblib bundles under model_dir."""
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     app_name: str = "FootyMetrics"
-    database_url: str = "postgresql+psycopg://footymetrics:footymetrics@localhost:5432/footymetrics"
     model_dir: Path = ROOT / "ml" / "models"
     data_dir: Path = ROOT / "data"
     cors_origins: list[str] = [
@@ -61,6 +62,21 @@ class Settings(BaseSettings):
     @property
     def scouting_players_path(self) -> Path:
         return self.data_dir / "processed" / "scouting_players.csv"
+
+    def runtime_files(self) -> list[Path]:
+        return [
+            self.players_csv_path,
+            self.matches_csv_path,
+            self.scouting_players_path,
+            self.valuation_model_path,
+            self.metrics_path,
+            self.feature_meta_path,
+            self.match_model_path,
+            self.match_metrics_path,
+            self.match_feature_meta_path,
+            self.scouting_bundle_path,
+            self.scouting_metrics_path,
+        ]
 
 
 settings = Settings()
